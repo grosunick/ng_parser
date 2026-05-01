@@ -23,6 +23,13 @@
 | `HttpClient` / `HttpxClient` | `ng_parser/client/` | `get()` **не бросает** на 4xx/5xx — `raise_for_status()` руками. |
 | `LogFormatter` / `get_logger` | `ng_parser/log_formatter.py` | Красный для WARNING+ только если `stderr.isatty()`. |
 
+## Refactoring Workflow
+
+- After any refactor, run the full test suite and report pass/fail counts before committing.
+- When renaming symbols, never use blind replace_all; verify each call site (especially test function names like `test_*`).
+- Prefer minimal, targeted changes over architectural rewrites; do NOT introduce new dataclasses, state objects, or exit codes unless explicitly requested.
+
+
 ## Инварианты
 
 - **Retry — на `Command.execute()`**, не внутри `fetch()`/`parse()`.
