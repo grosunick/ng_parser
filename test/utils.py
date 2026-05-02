@@ -52,3 +52,14 @@ def make_async_parser(client, *, workers=1, repository=None):
         client=client,
         repository=repository or ListRepository(),
     )
+
+
+def make_async_coroutine_parser(client, *, workers=1, repository=None):
+    """AsyncCoroutineParser с дефолтным ListRepository, если тесту не нужен реальный репозиторий."""
+    from ng_parser.algorithm import AsyncCoroutineParser
+
+    return AsyncCoroutineParser(
+        max_workers=workers,
+        client=client,
+        repository=repository or ListRepository(),
+    )
