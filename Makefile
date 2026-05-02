@@ -1,6 +1,8 @@
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
 
+.PHONY: install test clean
+
 install:
 	python3.12 -m venv $(VENV)
 	$(PYTHON) -m pip install -e .[dev]
