@@ -1,4 +1,4 @@
-"""AsyncCoroutineParser — корутина-на-задачу с лимитом через Semaphore."""
+"""AsyncCoroutineParser — корутина-на-задачу с лимитом через размер pending."""
 
 from __future__ import annotations
 
@@ -17,13 +17,13 @@ log = logging.getLogger(__name__)
 class AsyncCoroutineParser(Parser):
     """
     На каждую команду — отдельная корутина (`asyncio.create_task`).
-    Конкурентность ограничена `asyncio.Semaphore(max_workers)`: семафор
-    держится на время `cmd.execute()`, спавн дочерних — без удержания.
+    Конкурентность ограничена размером pending: новые корутины спавнятся
+    только пока `len(pending) < max_workers`. Лимит — per-run().
 
-    Без sentinel-механики, без TaskGroup. Главный цикл вычерпывает
-    очередь, дожидается завершения хотя бы одной корутины и проверяет
-    очередь снова — туда могли попасть дочерние команды от завершившихся
-    корутин.
+    Без sentinel-механики, без TaskGroup, без семафора. Главный цикл
+    вычерпывает очередь до лимита, ждёт завершения хотя бы одной корутины
+    и проверяет очередь снова — туда могли попасть дочерние команды от
+    завершившихся корутин.
     """
 
     def __init__(self, max_workers: int, client: HttpClient, repository: Repository):
@@ -31,7 +31,7 @@ class AsyncCoroutineParser(Parser):
             raise ValueError(f"max_workers должен быть >= 1, получили {max_workers}")
         self._client = client
         self._repository = repository
-        self._semaphore = asyncio.Semaphore(max_workers)
+        self._max_workers = max_workers
 
     async def run(self, queue: Queue) -> None:
         if queue.empty():
@@ -39,7 +39,7 @@ class AsyncCoroutineParser(Parser):
 
         pending: set[asyncio.Task] = set()
         while not queue.empty() or pending:
-            while not queue.empty():
+            while not queue.empty() and len(pending) < self._max_workers:
                 cmd = await queue.get()
                 pending.add(asyncio.create_task(self._handle(cmd, queue)))
             _, pending = await asyncio.wait(
@@ -47,13 +47,12 @@ class AsyncCoroutineParser(Parser):
             )
 
     async def _handle(self, cmd: Command, queue: Queue) -> None:
-        async with self._semaphore:
-            log.info("корутина начала задание: url=%s", cmd.url)
-            try:
-                result = await cmd.execute(self._client)
-            except Exception as e:
-                log.exception("команда %s упала: %s", cmd.url, e)
-                return
+        log.info("корутина начала задание: url=%s", cmd.url)
+        try:
+            result = await cmd.execute(self._client)
+        except Exception as e:
+            log.exception("команда %s упала: %s", cmd.url, e)
+            return
         for row in result.rows:
             self._repository.add(row)
         for child in result.children:
