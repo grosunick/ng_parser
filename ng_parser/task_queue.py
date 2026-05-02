@@ -1,8 +1,4 @@
-"""Абстрактная FIFO-очередь заданий парсинга.
-
-put() — синхронный, очередь не bounded, вызовы из parse() не блокируются.
-get() — асинхронный, блокирует до появления элемента или sentinel-а (None).
-"""
+"""Абстрактная FIFO-очередь заданий парсинга."""
 
 from __future__ import annotations
 
@@ -14,28 +10,13 @@ if TYPE_CHECKING:
 
 
 class Queue(ABC):
-    """Очередь заданий с sentinel-завершением."""
+    """Очередь заданий: put синхронный, get асинхронный."""
 
     @abstractmethod
-    def put(self, command: "Command") -> None:
-        """Положить команду в конец очереди. Без ожидания."""
-        ...
+    def put(self, command: "Command") -> None: ...
 
     @abstractmethod
-    async def get(self) -> "Command | None":
-        """Извлечь команду из начала очереди.
-
-        Блокирует event loop до появления элемента. Возвращает None, если
-        был положен sentinel завершения через close(n).
-        """
-        ...
+    async def get(self) -> "Command": ...
 
     @abstractmethod
-    def empty(self) -> bool:
-        """True, если в очереди нет элементов."""
-        ...
-
-    @abstractmethod
-    def close(self, n_sentinels: int) -> None:
-        """Положить N sentinel-ов (None) — все ждущие воркеры проснутся и выйдут."""
-        ...
+    def empty(self) -> bool: ...

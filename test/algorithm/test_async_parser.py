@@ -146,14 +146,18 @@ def test_failing_command_does_not_abort_siblings():
 # ── ограничение параллельности ────────────────────────────────────────────────
 
 def test_max_workers_limit_is_enforced():
-    """10 команд при max_workers=3 → одновременно не более 3."""
+    """10 команд в одной очереди при max_workers=3 → одновременно не более 3.
+
+    Лимит — per-run(): несколько параллельных run() на одном инстансе
+    делят лимит независимо, поэтому проверяем в рамках одного run().
+    """
     transport, counter = _counting_transport(hold_seconds=0.05)
     client = make_test_client(transport)
 
     async def _():
         parser = make_async_parser(client, workers=3)
-        tasks = [parser.run(make_queue_with(UrlCommand(f"https://example.com/{i}"))) for i in range(10)]
-        await asyncio.gather(*tasks)
+        urls = [UrlCommand(f"https://example.com/{i}") for i in range(10)]
+        await parser.run(make_queue_with(*urls))
 
     asyncio.run(_())
     asyncio.run(client.close())

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 
 class HttpClientError(Exception):
-    """Базовое исключение HTTP-клиента."""
+    pass
 
 
 class HttpTransportError(HttpClientError):
@@ -15,7 +15,7 @@ class HttpTransportError(HttpClientError):
 
 
 class HttpStatusError(HttpClientError):
-    """4xx/5xx HTTP-статус. Бросается HttpResponse.raise_for_status()."""
+    """4xx/5xx HTTP-статус. Бросается из HttpResponse.raise_for_status()."""
 
     def __init__(self, message: str, status_code: int):
         super().__init__(message)
@@ -37,23 +37,15 @@ class HttpResponse:
 
 
 class HttpClient(ABC):
-    """
-    Асинхронный сессионный HTTP-клиент: cookies/настройки из конструктора
-    живут между вызовами get() — это нужно для warmup-сценария auto.ru.
-    """
+    """Сессионный HTTP-клиент: cookies/настройки живут между get() (нужно для warmup)."""
 
     @abstractmethod
     async def get(self, url: str, *, headers: dict | None = None) -> HttpResponse:
-        """
-        GET-запрос. На 4xx/5xx НЕ бросает — вызывающий код решает сам.
-        Бросает HttpTransportError на сетевые проблемы.
-        """
+        """GET. На 4xx/5xx не бросает — вызывающий код решает сам."""
         ...
 
     @abstractmethod
-    async def close(self) -> None:
-        """Закрыть сессию и освободить ресурсы."""
-        ...
+    async def close(self) -> None: ...
 
     async def __aenter__(self) -> "HttpClient":
         return self

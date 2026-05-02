@@ -1,4 +1,4 @@
-"""Пакет `packages.parser`: базовые абстракции и готовые парсеры."""
+"""ng_parser: базовые абстракции и готовые парсеры."""
 
 from .command import Command, ParseResult
 from .log_formatter import LogFormatter, get_logger

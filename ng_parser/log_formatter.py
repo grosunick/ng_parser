@@ -1,9 +1,4 @@
-"""LogFormatter и get_logger — единая точка настройки логирования.
-
-LogFormatter красит WARNING/ERROR/CRITICAL красным, если stderr — TTY:
-в файл/Docker-stdout/CI пишутся чистые строки без ANSI-эскейпов, в
-интерактивном терминале — выделенные цветом важные сообщения.
-"""
+"""LogFormatter и get_logger — настройка логирования с TTY-aware подсветкой."""
 
 from __future__ import annotations
 
@@ -12,7 +7,7 @@ import sys
 
 
 class LogFormatter(logging.Formatter):
-    """Formatter с TTY-aware подсветкой WARNING+ уровней красным."""
+    """Красит WARNING/ERROR/CRITICAL красным, если stderr — TTY."""
 
     _RED = "\033[31m"
     _RESET = "\033[0m"
@@ -30,11 +25,7 @@ class LogFormatter(logging.Formatter):
 
 
 def get_logger(name: str, *, verbose: bool = False) -> logging.Logger:
-    """Настраивает глобальный logging (LogFormatter + StreamHandler) и возвращает именованный логгер.
-
-    Идемпотентен: повторные вызовы logging.basicConfig игнорируются stdlib-ом,
-    если root-логгер уже сконфигурирован. Безопасно звать из main() с разными verbose.
-    """
+    """Идемпотентен: stdlib игнорирует повторный basicConfig, если root уже сконфигурирован."""
     level = logging.DEBUG if verbose else logging.INFO
     handler = logging.StreamHandler()
     handler.setFormatter(LogFormatter(

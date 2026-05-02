@@ -1,4 +1,4 @@
-"""Пакет `packages.parser.client` — HTTP-слой приложения."""
+"""HTTP-слой ng_parser."""
 
 from .http_client import (
     HttpClient,

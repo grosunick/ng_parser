@@ -17,8 +17,8 @@
 | Сущность | Файл | Роль |
 |---|---|---|
 | `Command` / `ParseResult` | `ng_parser/command.py` | Контракт: `fetch()` → `parse(html)` → `ParseResult`. Retry с backoff в `execute()`. Хранит **только URL**. |
-| `Parser` / `AsyncParser` | `ng_parser/{parser,algorithm/async_parser}.py` | Раннер. `run(queue)` поднимает N воркеров, пишет `rows` в repository, `children` — в queue. **Только раннер знает про Repository и Queue.** |
-| `Queue` / `AsyncQueue` | `ng_parser/{task_queue,queue/async_queue}.py` | Unbounded FIFO. `put` синхронный, `get` async, `close(n)` — sentinel. |
+| `Parser` / `AsyncParser` | `ng_parser/{parser,algorithm/async_parser}.py` | Раннер. `run(queue)` спавнит корутину на каждую команду; одновременно не более `max_workers` (per-run). Пишет `rows` в repository, `children` — в queue. **Только раннер знает про Repository и Queue.** |
+| `Queue` / `AsyncQueue` | `ng_parser/{task_queue,queue/async_queue}.py` | Unbounded FIFO. `put` синхронный, `get` async. |
 | `Repository` | `ng_parser/repository.py` | Sink: `add(row)`. Без дедупликации. |
 | `HttpClient` / `HttpxClient` | `ng_parser/client/` | `get()` **не бросает** на 4xx/5xx — `raise_for_status()` руками. |
 | `LogFormatter` / `get_logger` | `ng_parser/log_formatter.py` | Красный для WARNING+ только если `stderr.isatty()`. |
@@ -35,7 +35,7 @@
 - **Retry — на `Command.execute()`**, не внутри `fetch()`/`parse()`.
 - **Команды не знают про Repository/Queue.** `parse()` — pure функция HTML→`ParseResult`.
 - **Запись per-page атомарна.** Если `parse()` упал — частичных записей нет.
-- **Завершение через sentinel**, не `queue.join()`. Когда `active==0 and queue.empty()`, последний воркер делает `queue.close(N)`.
+- **Завершение `run()`** — когда очередь пуста и `pending` пуст. Без sentinel-ов и `queue.join()`.
 - **Раннер глушит ВСЕ исключения команд** и идёт дальше.
 - **`HttpClient.get()` не бросает на 4xx/5xx** намеренно.
 - **Никаких `\033[...]` в коде** — цвет накручивает `LogFormatter` только для TTY.
