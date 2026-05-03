@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from .client import HttpClient
+from .http_client import HttpClient
 
 
 class ProxyService(ABC):

@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING, Iterable, NamedTuple
 _retry_sleep = asyncio.sleep
 
 if TYPE_CHECKING:
-    from ng_parser.client import HttpClient
-    from ng_parser.proxy_service import ProxyService
+    from ng_parser.client import HttpClient, ProxyService
 
 
 log = logging.getLogger(__name__)

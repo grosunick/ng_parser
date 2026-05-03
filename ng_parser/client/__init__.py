@@ -8,6 +8,8 @@ from .http_client import (
     HttpTransportError,
 )
 from .httpx_client import HttpxClient
+from .proxy import Proxy
+from .proxy_service import ProxyService
 
 __all__ = [
     "HttpClient",
@@ -16,4 +18,6 @@ __all__ = [
     "HttpStatusError",
     "HttpTransportError",
     "HttpxClient",
+    "Proxy",
+    "ProxyService",
 ]

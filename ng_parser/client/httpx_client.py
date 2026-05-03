@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import httpx
 
-from ..proxy import Proxy
 from .http_client import HttpClient, HttpResponse, HttpTransportError
+from .proxy import Proxy
 
 
 class HttpxClient(HttpClient):

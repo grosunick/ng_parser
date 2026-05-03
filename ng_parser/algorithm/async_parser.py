@@ -5,10 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from ng_parser.client import HttpClient
+from ng_parser.client import HttpClient, ProxyService
 from ng_parser.command import Command
 from ng_parser.parser import Parser
-from ng_parser.proxy_service import ProxyService
 from ng_parser.repository import Repository
 from ng_parser.task_queue import Queue
 

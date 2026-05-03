@@ -1,8 +1,8 @@
-"""Тесты для ng_parser.proxy: dataclass Proxy и его properties."""
+"""Тесты для ng_parser.client.proxy: dataclass Proxy и его properties."""
 
 import pytest
 
-from ng_parser.proxy import Proxy
+from ng_parser.client.proxy import Proxy
 
 
 @pytest.mark.parametrize(

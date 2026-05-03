@@ -3,8 +3,7 @@
 import httpx
 
 from ng_parser import Command, ParseResult, Repository
-from ng_parser.client import HttpxClient
-from ng_parser.proxy import Proxy
+from ng_parser.client import HttpxClient, Proxy
 
 
 class UrlCommand(Command):
