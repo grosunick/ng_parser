@@ -1,6 +1,10 @@
 """Хелперы для тестов пакета `ng_parser` — построение тестовых объектов."""
 
+import httpx
+
 from ng_parser import Command, ParseResult, Repository
+from ng_parser.client import HttpxClient
+from ng_parser.proxy import Proxy
 
 
 class UrlCommand(Command):
@@ -20,17 +24,49 @@ class ListRepository(Repository):
         self.rows.append(row)
 
 
-def make_test_client(transport):
-    """Тестовый HttpxClient с минимальными обязательными параметрами."""
-    from ng_parser.client import HttpxClient
+class _MockTransportHttpxClient(HttpxClient):
+    """HttpxClient с подменённым httpx.AsyncBaseTransport — для MockTransport-тестов.
+    Только для тестов: подменяет _build_client(), чтобы не ходить в сеть."""
 
-    return HttpxClient(
-        headers={},
-        timeout=5.0,
-        http2=False,
-        follow_redirects=False,
-        transport=transport,
-    )
+    def __init__(
+        self,
+        *,
+        transport: httpx.AsyncBaseTransport,
+        headers: dict | None = None,
+        timeout: float = 5.0,
+        http2: bool = False,
+        follow_redirects: bool = False,
+    ):
+        self._mock_transport = transport
+        super().__init__(
+            headers=headers,
+            timeout=timeout,
+            http2=http2,
+            follow_redirects=follow_redirects,
+        )
+
+    def _build_client(
+        self,
+        *,
+        headers: dict,
+        timeout: float,
+        http2: bool,
+        follow_redirects: bool,
+        proxy: Proxy | None,
+    ) -> httpx.AsyncClient:
+        # transport переопределяет proxy — MockTransport ловит всё.
+        return httpx.AsyncClient(
+            headers=headers,
+            timeout=timeout,
+            http2=http2,
+            follow_redirects=follow_redirects,
+            transport=self._mock_transport,
+        )
+
+
+def make_test_client(transport):
+    """Тестовый HttpxClient с MockTransport."""
+    return _MockTransportHttpxClient(transport=transport)
 
 
 def make_queue_with(*commands):

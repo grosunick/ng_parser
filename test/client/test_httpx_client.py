@@ -5,11 +5,10 @@ import asyncio
 import httpx
 import pytest
 
-from utils import make_test_client
+from utils import _MockTransportHttpxClient, make_test_client
 from ng_parser.client import (
     HttpResponse,
     HttpTransportError,
-    HttpxClient,
 )
 
 
@@ -48,12 +47,9 @@ def test_httpx_client_session_headers_persist():
         return httpx.Response(200, text="ok")
 
     async def _():
-        async with HttpxClient(
-            headers={"X-Session": "session-token"},
-            timeout=5.0,
-            http2=False,
-            follow_redirects=False,
+        async with _MockTransportHttpxClient(
             transport=httpx.MockTransport(handler),
+            headers={"X-Session": "session-token"},
         ) as client:
             await client.get("https://a/")
             await client.get("https://b/")

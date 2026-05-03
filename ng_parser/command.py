@@ -13,6 +13,7 @@ _retry_sleep = asyncio.sleep
 
 if TYPE_CHECKING:
     from ng_parser.client import HttpClient
+    from ng_parser.proxy_service import ProxyService
 
 
 log = logging.getLogger(__name__)
@@ -37,21 +38,34 @@ class Command(ABC):
     def __init__(self, url: str):
         self.url = url
 
-    async def execute(self, client: HttpClient) -> ParseResult:
-        """fetch+parse с exponential backoff, кроме _NON_RETRIABLE_EXCEPTIONS."""
+    async def execute(
+        self,
+        client: HttpClient,
+        proxy_service: "ProxyService | None" = None,
+    ) -> ParseResult:
+        """fetch+parse с exponential backoff, кроме _NON_RETRIABLE_EXCEPTIONS.
+
+        При наличии proxy_service: клиент на каждую попытку берётся через acquire(),
+        а на retry-эксепшене дёргается report_bad(client, reason).
+        """
         attempts = max(1, self.RETRY_ATTEMPTS)
         delay = self.RETRY_INITIAL_DELAY_SEC
 
         last_exc: BaseException | None = None
         for attempt in range(1, attempts + 1):
+            active = (
+                await proxy_service.acquire() if proxy_service is not None else client
+            )
             try:
-                html = await self.fetch(client)
+                html = await self.fetch(active)
                 result = await self.parse(html)
                 return result if result is not None else ParseResult()
             except self._NON_RETRIABLE_EXCEPTIONS:
                 raise
             except Exception as e:
                 last_exc = e
+                if proxy_service is not None:
+                    await proxy_service.report_bad(active, e)
                 if attempt < attempts:
                     log.warning(
                         "ошибка парсинга %s (попытка %d/%d): %s — повтор через %.1fs",

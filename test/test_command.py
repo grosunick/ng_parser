@@ -380,3 +380,156 @@ def test_execute_no_retry_when_attempts_is_1(monkeypatch):
 
     assert attempts["n"] == 1
     assert sleeps == []
+
+
+# ============================================================================
+# Command.execute() с ProxyService
+# ============================================================================
+
+
+class _FakeProxyService:
+    """Мок ProxyService: при каждом acquire() отдаёт следующий клиент по списку,
+    собирает все вызовы report_bad для проверок."""
+
+    def __init__(self, clients):
+        self._clients = list(clients)
+        self._idx = 0
+        self.acquire_calls = 0
+        self.bad_reports: list[tuple[object, Exception]] = []
+        self.closed = False
+
+    async def acquire(self):
+        client = self._clients[self._idx % len(self._clients)]
+        self._idx += 1
+        self.acquire_calls += 1
+        return client
+
+    async def report_bad(self, client, reason):
+        self.bad_reports.append((client, reason))
+
+    async def close(self):
+        self.closed = True
+
+
+def test_execute_uses_proxy_service_acquire_per_attempt():
+    """proxy_service.acquire() вызывается перед каждой попыткой."""
+    client = make_test_client(_make_ok_transport())
+    svc = _FakeProxyService([client])
+
+    class OK(Command):
+        async def parse(self, html):
+            return ParseResult()
+
+    cmd = OK("https://example.com/")
+    asyncio.run(cmd.execute(client, svc))
+    asyncio.run(client.close())
+
+    assert svc.acquire_calls == 1
+    assert svc.bad_reports == []
+
+
+def test_execute_calls_report_bad_on_retriable_failure():
+    """retry-эксепшен → report_bad(client, e) вызван для соответствующего клиента."""
+    c1 = make_test_client(_make_ok_transport())
+    c2 = make_test_client(_make_ok_transport())
+    svc = _FakeProxyService([c1, c2])
+
+    class FailsTwiceThenOk(Command):
+        RETRY_ATTEMPTS = 3
+        RETRY_INITIAL_DELAY_SEC = 0.0
+        n = 0
+
+        async def fetch(self, client):
+            FailsTwiceThenOk.n += 1
+            if FailsTwiceThenOk.n < 3:
+                raise RuntimeError("transport down")
+            return "ok"
+
+        async def parse(self, html):
+            return ParseResult()
+
+    cmd = FailsTwiceThenOk("https://example.com/")
+    asyncio.run(cmd.execute(c1, svc))
+
+    assert svc.acquire_calls == 3
+    # 2 неудачи → 2 report_bad; третья попытка успешна → report_bad не вызывается.
+    assert len(svc.bad_reports) == 2
+    # acquire поочерёдно отдаёт c1, c2, c1 — первые два упали, третий успех.
+    assert [reported_client for reported_client, _ in svc.bad_reports] == [c1, c2]
+    assert all(isinstance(reason, RuntimeError) for _, reason in svc.bad_reports)
+
+    asyncio.run(c1.close())
+    asyncio.run(c2.close())
+
+
+def test_execute_does_not_call_report_bad_on_non_retriable():
+    """_NON_RETRIABLE_EXCEPTIONS пробрасывается без report_bad."""
+
+    class StopError(Exception):
+        pass
+
+    client = make_test_client(_make_ok_transport())
+    svc = _FakeProxyService([client])
+
+    class NonRetriable(Command):
+        RETRY_ATTEMPTS = 5
+        _NON_RETRIABLE_EXCEPTIONS = (StopError,)
+
+        async def fetch(self, client):
+            raise StopError("bail")
+
+        async def parse(self, html):
+            return ParseResult()
+
+    cmd = NonRetriable("https://example.com/")
+    with pytest.raises(StopError):
+        asyncio.run(cmd.execute(client, svc))
+
+    assert svc.acquire_calls == 1
+    assert svc.bad_reports == []
+    asyncio.run(client.close())
+
+
+def test_execute_without_proxy_service_uses_base_client():
+    """proxy_service=None — клиент берётся напрямую (как раньше), acquire не дёргается."""
+    seen: list[object] = []
+
+    class Captor(Command):
+        async def fetch(self, client):
+            seen.append(client)
+            return "ok"
+
+        async def parse(self, html):
+            return ParseResult()
+
+    client = make_test_client(_make_ok_transport())
+    cmd = Captor("https://example.com/")
+    asyncio.run(cmd.execute(client))
+    asyncio.run(client.close())
+
+    assert seen == [client]
+
+
+def test_async_parser_passes_proxy_service_to_execute():
+    """AsyncParser прокидывает proxy_service в Command.execute()."""
+    client = make_test_client(_make_ok_transport())
+    svc = _FakeProxyService([client])
+
+    class OK(Command):
+        async def parse(self, html):
+            return ParseResult()
+
+    async def _():
+        from ng_parser.algorithm import AsyncParser
+
+        parser = AsyncParser(
+            max_workers=1, client=client, repository=ListRepository(), proxy_service=svc
+        )
+        async with parser:
+            await parser.run(make_queue_with(OK("https://example.com/")))
+
+    asyncio.run(_())
+    asyncio.run(client.close())
+
+    assert svc.acquire_calls == 1
+    assert svc.bad_reports == []
