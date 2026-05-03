@@ -7,17 +7,17 @@ from .http_client import (
     HttpStatusError,
     HttpTransportError,
 )
+from .http_proxy import HttpProxy
 from .httpx_client import HttpxClient
-from .proxy import Proxy
 from .proxy_service import ProxyService
 
 __all__ = [
     "HttpClient",
     "HttpClientError",
+    "HttpProxy",
     "HttpResponse",
     "HttpStatusError",
     "HttpTransportError",
     "HttpxClient",
-    "Proxy",
     "ProxyService",
 ]

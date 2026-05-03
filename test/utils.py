@@ -3,7 +3,7 @@
 import httpx
 
 from ng_parser import Command, ParseResult, Repository
-from ng_parser.client import HttpxClient, Proxy
+from ng_parser.client import HttpProxy, HttpxClient
 
 
 class UrlCommand(Command):
@@ -51,7 +51,7 @@ class _MockTransportHttpxClient(HttpxClient):
         timeout: float,
         http2: bool,
         follow_redirects: bool,
-        proxy: Proxy | None,
+        proxy: HttpProxy | None,
     ) -> httpx.AsyncClient:
         # transport переопределяет proxy — MockTransport ловит всё.
         return httpx.AsyncClient(

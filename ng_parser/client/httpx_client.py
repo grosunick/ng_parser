@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 
 from .http_client import HttpClient, HttpResponse, HttpTransportError
-from .proxy import Proxy
+from .http_proxy import HttpProxy
 
 
 class HttpxClient(HttpClient):
@@ -21,7 +21,7 @@ class HttpxClient(HttpClient):
         timeout: float = 20.0,
         http2: bool = True,
         follow_redirects: bool = True,
-        proxy: Proxy | None = None,
+        proxy: HttpProxy | None = None,
     ):
         # httpx.AsyncClient(headers=None) бросает — подставляем пустой dict.
         self._client = self._build_client(
@@ -39,7 +39,7 @@ class HttpxClient(HttpClient):
         timeout: float,
         http2: bool,
         follow_redirects: bool,
-        proxy: Proxy | None,
+        proxy: HttpProxy | None,
     ) -> httpx.AsyncClient:
         """Factory-метод httpx.AsyncClient. Точка расширения для наследников."""
         tr = _make_proxy_transport(proxy) if proxy is not None else None
@@ -67,7 +67,7 @@ class HttpxClient(HttpClient):
         await self._client.aclose()
 
 
-def _make_proxy_transport(proxy: Proxy) -> httpx.AsyncBaseTransport:
+def _make_proxy_transport(proxy: HttpProxy) -> httpx.AsyncBaseTransport:
     """Транспорт под прокси: SOCKS — через httpx-socks, HTTP(S) — нативный httpx."""
     if proxy.is_socks:
         try:

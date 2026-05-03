@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Proxy:
+class HttpProxy:
     """Прокси-сервер. Тип определяется по схеме URL: http://, https://, socks5://, socks4://, ..."""
 
     url: str

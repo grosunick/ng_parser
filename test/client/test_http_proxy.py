@@ -1,8 +1,8 @@
-"""Тесты для ng_parser.client.proxy: dataclass Proxy и его properties."""
+"""Тесты для ng_parser.client.http_proxy: dataclass HttpProxy и его properties."""
 
 import pytest
 
-from ng_parser.client.proxy import Proxy
+from ng_parser.client.http_proxy import HttpProxy
 
 
 @pytest.mark.parametrize(
@@ -19,7 +19,7 @@ from ng_parser.client.proxy import Proxy
     ],
 )
 def test_proxy_scheme(url, expected_scheme):
-    assert Proxy(url=url).scheme == expected_scheme
+    assert HttpProxy(url=url).scheme == expected_scheme
 
 
 @pytest.mark.parametrize(
@@ -35,7 +35,7 @@ def test_proxy_scheme(url, expected_scheme):
     ],
 )
 def test_proxy_is_socks(url, is_socks):
-    assert Proxy(url=url).is_socks is is_socks
+    assert HttpProxy(url=url).is_socks is is_socks
 
 
 @pytest.mark.parametrize(
@@ -49,20 +49,20 @@ def test_proxy_is_socks(url, is_socks):
     ],
 )
 def test_proxy_is_http(url, is_http):
-    assert Proxy(url=url).is_http is is_http
+    assert HttpProxy(url=url).is_http is is_http
 
 
 def test_proxy_is_frozen():
-    p = Proxy(url="http://host", label="primary")
+    p = HttpProxy(url="http://host", label="primary")
     with pytest.raises(Exception):
         p.url = "http://other"  # type: ignore[misc]
 
 
 def test_proxy_label_default_empty():
-    assert Proxy(url="http://host").label == ""
+    assert HttpProxy(url="http://host").label == ""
 
 
 def test_proxy_equality_includes_label():
     """label — часть identity, два прокси с одним url, но разными label не равны."""
-    assert Proxy(url="http://host", label="a") != Proxy(url="http://host", label="b")
-    assert Proxy(url="http://host") == Proxy(url="http://host")
+    assert HttpProxy(url="http://host", label="a") != HttpProxy(url="http://host", label="b")
+    assert HttpProxy(url="http://host") == HttpProxy(url="http://host")
